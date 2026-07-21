@@ -3,7 +3,7 @@ import streamlit as st
 import numpy as np
 import pandas as pd
 from scipy.stats import poisson
-
+import requests
 st.set_page_config(page_title="Calc Futebol", page_icon="⚽", layout="wide")
 
 st.title("⚽ Calculadora Quantitativa de Futebol")
