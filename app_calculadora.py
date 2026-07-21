@@ -15,8 +15,8 @@ st.markdown("Análise estatística baseada em **Dixon-Coles, Poisson e Monte Car
 # ==========================================
 st.sidebar.header("⚙️ Input de Dados")
 DATA_JOGO = st.sidebar.date_input("Data do Jogo")
-TIME_CASA = st.sidebar.text_input("Time da Casa", "Flamengo")
-TIME_FORA = st.sidebar.text_input("Time Visitante", "Palmeiras")
+TIME_CASA = st.sidebar.text_input("Mandante")
+TIME_FORA = st.sidebar.text_input("Visitante")
 
 # ==========================================
 # INTEGRAÇÃO COM API EXTERNA (API-Football)
