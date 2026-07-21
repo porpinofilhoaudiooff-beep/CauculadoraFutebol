@@ -13,50 +13,49 @@ st.markdown("Análise estatística baseada em **Dixon-Coles, Poisson e Monte Car
 # MENU LATERAL - INPUT DE DADOS
 # ==========================================
 st.sidebar.header("⚙️ Input de Dados")
-DATA_JOGO = st.sidebar.date_input("Data do Jogo") # <-- LINHA NOVA AQUI
-TIME_CASA = st.sidebar.text_input("Time da Casa", "Flamengo")
-TIME_FORA = st.sidebar.text_input("Time Visitante", "Palmeiras")
+DATA_JOGO = st.sidebar.date_input("Data do Jogo")
+TIME_CASA = st.sidebar.text_input("Time da Casa")
+TIME_FORA = st.sidebar.text_input("Time Visitante")
 
-with st.sidebar.expander("1. GOLS (Médias)"):
-    GF_CASA = st.number_input("Gols Feitos (Casa)", value=2.10, step=0.1)
-    GA_CASA = st.number_input("Gols Sofridos (Casa)", value=0.85, step=0.1)
-    GF_FORA = st.number_input("Gols Feitos (Fora)", value=1.30, step=0.1)
-    GA_FORA = st.number_input("Gols Sofridos (Fora)", value=1.10, step=0.1)
-    LIGA_MEDIA_GOLS_MANDANTE = st.number_input("Média Liga Mandante", value=1.45, step=0.1)
-    LIGA_MEDIA_GOLS_VISITANTE = st.number_input("Média Liga Visitante", value=1.15, step=0.1)
-    RHO = st.number_input("Correlação (Rho)", value=-0.08, step=0.01)
-    PLACAR_MAX = 8
+# ==========================================
+# INTEGRAÇÃO COM API EXTERNA (API-Football)
+# ==========================================
+# 1. Cole a sua chave copiada do site dentro das aspas abaixo:
+API_KEY = "7e5b9458c3fd615c5a82b9598d5547a3"
 
-with st.sidebar.expander("2. ESCANTEIOS"):
-    ESCANTEIOS_CASA_F = st.number_input("Esc. Feitos (Casa)", value=6.2)
-    ESCANTEIOS_FORA_F = st.number_input("Esc. Feitos (Fora)", value=4.5)
-    ESCANTEIOS_CASA_S = st.number_input("Esc. Sofridos (Casa)", value=3.8)
-    ESCANTEIOS_FORA_S = st.number_input("Esc. Sofridos (Fora)", value=5.0)
-    PESO_MANDO_ESC = st.number_input("Peso Mando (Esc)", value=1.05)
-
-with st.sidebar.expander("3. CARTÕES"):
-    CART_CASA = st.number_input("Cartões (Casa)", value=2.3)
-    CART_FORA = st.number_input("Cartões (Fora)", value=2.6)
-    CART_ARB = st.number_input("Média Árbitro", value=4.1)
-    CART_LIGA = st.number_input("Média Liga (Cartões)", value=3.9)
-    PESO_CLASSICO = st.number_input("Peso Clássico", value=1.0)
-    PESO_DECISAO = st.number_input("Peso Decisão", value=1.0)
-    PESO_RIVALIDADE = st.number_input("Peso Rivalidade", value=1.0)
-
-with st.sidebar.expander("4. EXPECTED GOALS (xG)"):
-    XG_CASA = st.number_input("xG (Casa)", value=1.95)
-    XGA_CASA = st.number_input("xGA (Casa)", value=0.95)
-    XG_FORA = st.number_input("xG (Fora)", value=1.20)
-    XGA_FORA = st.number_input("xGA (Fora)", value=1.35)
-    PESO_SHRINKAGE = st.number_input("Peso xG vs Real", value=0.6)
-
-with st.sidebar.expander("5. MERCADO E BANCA"):
-    ODD_CASA = st.number_input("Odd Casa", value=1.75)
-    ODD_EMPATE = st.number_input("Odd Empate", value=3.60)
-    ODD_FORA = st.number_input("Odd Fora", value=4.80)
-    ODD_O25 = st.number_input("Odd Over 2.5", value=1.95)
-    ODD_BTTS = st.number_input("Odd BTTS", value=1.85)
-    BANCA = st.number_input("Banca Total (R$)", value=1000.0)
+# Usamos o cache do Streamlit (ttl=86400 segundos = 24h) para o app não gastar o 
+# limite grátis da API se você ficar mudando os números na tela.
+@st.cache_data(ttl=86400) 
+def buscar_stat(nome_time, coluna, valor_padrao):
+    if API_KEY == "7e5b9458c3fd615c5a82b9598d5547a3":
+        return valor_padrao # Proteção caso esqueça de colocar a chave
+        
+    url = "https://v3.football.api-sports.io/teams"
+    headers = {
+        'x-apisports-key': API_KEY
+    }
+    
+    try:
+        # O App bate na porta da API buscando o time
+        response = requests.get(f"{url}?search={nome_time}", headers=headers)
+        dados = response.json()
+        
+        # Verifica se a API encontrou o time
+        if dados['results'] > 0:
+            time_id = dados['response'][0]['team']['id']
+            # IMPORTANTE: 
+            # Como a busca de médias exatas exige cruzar o time com a liga atual,
+            # este bloco retorna o valor padrão para não quebrar o site enquanto 
+            # você estuda a documentação da API-Football para mapear as rotas de estatísticas.
+            
+            # Aqui entraria a segunda requisição usando o 'time_id' para buscar a aba de "statistics".
+            return valor_padrao
+            
+    except Exception as e:
+        # Se der erro de internet, mostra um aviso discreto no menu
+        st.sidebar.warning(f"Aviso da API: Não foi possível sincronizar o {nome_time}.")
+        
+    return valor_padrao
 
 # ==========================================
 # CÁLCULOS MATEMÁTICOS (Módulos Adaptados)
