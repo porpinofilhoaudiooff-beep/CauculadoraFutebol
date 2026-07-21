@@ -56,7 +56,15 @@ def buscar_stat(nome_time, coluna, valor_padrao):
         st.sidebar.warning(f"Aviso da API: Não foi possível sincronizar o {nome_time}.")
         
     return valor_padrao
-
+with st.sidebar.expander("1. GOLS (Médias)"):
+    GF_CASA = st.number_input("Gols Feitos (Casa)", value=buscar_stat(TIME_CASA, "GF_CASA", 2.10), step=0.1)
+    GA_CASA = st.number_input("Gols Sofridos (Casa)", value=buscar_stat(TIME_CASA, "GA_CASA", 0.85), step=0.1)
+    GF_FORA = st.number_input("Gols Feitos (Fora)", value=buscar_stat(TIME_FORA, "GF_FORA", 1.30), step=0.1)
+    GA_FORA = st.number_input("Gols Sofridos (Fora)", value=buscar_stat(TIME_FORA, "GA_FORA", 1.10), step=0.1)
+    LIGA_MEDIA_GOLS_MANDANTE = st.number_input("Média Liga Mandante", value=1.45, step=0.1)
+    LIGA_MEDIA_GOLS_VISITANTE = st.number_input("Média Liga Visitante", value=1.15, step=0.1)
+    RHO = st.number_input("Correlação (Rho)", value=-0.08, step=0.01)
+    PLACAR_MAX = 8
 # ==========================================
 # CÁLCULOS MATEMÁTICOS (Módulos Adaptados)
 # ==========================================
