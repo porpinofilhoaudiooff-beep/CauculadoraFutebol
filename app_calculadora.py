@@ -4,6 +4,7 @@ import numpy as np
 import pandas as pd
 from scipy.stats import poisson
 import requests
+
 st.set_page_config(page_title="Calc Futebol", page_icon="⚽", layout="wide")
 
 st.title("⚽ Calculadora Quantitativa de Futebol")
@@ -14,48 +15,37 @@ st.markdown("Análise estatística baseada em **Dixon-Coles, Poisson e Monte Car
 # ==========================================
 st.sidebar.header("⚙️ Input de Dados")
 DATA_JOGO = st.sidebar.date_input("Data do Jogo")
-TIME_CASA = st.sidebar.text_input("Time da Casa")
-TIME_FORA = st.sidebar.text_input("Time Visitante")
+TIME_CASA = st.sidebar.text_input("Time da Casa", "Flamengo")
+TIME_FORA = st.sidebar.text_input("Time Visitante", "Palmeiras")
 
 # ==========================================
 # INTEGRAÇÃO COM API EXTERNA (API-Football)
 # ==========================================
-# 1. Cole a sua chave copiada do site dentro das aspas abaixo:
 API_KEY = "7e5b9458c3fd615c5a82b9598d5547a3"
 
-# Usamos o cache do Streamlit (ttl=86400 segundos = 24h) para o app não gastar o 
-# limite grátis da API se você ficar mudando os números na tela.
 @st.cache_data(ttl=86400) 
 def buscar_stat(nome_time, coluna, valor_padrao):
-    if API_KEY == "7e5b9458c3fd615c5a82b9598d5547a3":
-        return valor_padrao # Proteção caso esqueça de colocar a chave
+    if not API_KEY or API_KEY == "COLE_SUA_CHAVE_AQUI":
+        return valor_padrao
         
     url = "https://v3.football.api-sports.io/teams"
-    headers = {
-        'x-apisports-key': API_KEY
-    }
+    headers = {'x-apisports-key': API_KEY}
     
     try:
-        # O App bate na porta da API buscando o time
         response = requests.get(f"{url}?search={nome_time}", headers=headers)
         dados = response.json()
         
-        # Verifica se a API encontrou o time
-        if dados['results'] > 0:
+        if dados.get('results', 0) > 0:
             time_id = dados['response'][0]['team']['id']
-            # IMPORTANTE: 
-            # Como a busca de médias exatas exige cruzar o time com a liga atual,
-            # este bloco retorna o valor padrão para não quebrar o site enquanto 
-            # você estuda a documentação da API-Football para mapear as rotas de estatísticas.
-            
-            # Aqui entraria a segunda requisição usando o 'time_id' para buscar a aba de "statistics".
+            # Aqui no futuro você pode expandir para buscar as estatísticas exatas via time_id
             return valor_padrao
             
     except Exception as e:
-        # Se der erro de internet, mostra um aviso discreto no menu
         st.sidebar.warning(f"Aviso da API: Não foi possível sincronizar o {nome_time}.")
         
     return valor_padrao
+
+# Expander 1: Gols
 with st.sidebar.expander("1. GOLS (Médias)"):
     GF_CASA = st.number_input("Gols Feitos (Casa)", value=buscar_stat(TIME_CASA, "GF_CASA", 2.10), step=0.1)
     GA_CASA = st.number_input("Gols Sofridos (Casa)", value=buscar_stat(TIME_CASA, "GA_CASA", 0.85), step=0.1)
@@ -65,11 +55,39 @@ with st.sidebar.expander("1. GOLS (Médias)"):
     LIGA_MEDIA_GOLS_VISITANTE = st.number_input("Média Liga Visitante", value=1.15, step=0.1)
     RHO = st.number_input("Correlação (Rho)", value=-0.08, step=0.01)
     PLACAR_MAX = 8
+
+# Expander 2: Escanteios
+with st.sidebar.expander("2. ESCANTEIOS"):
+    ESCANTEIOS_CASA_F = st.number_input("Escanteios Feitos Casa", value=6.5, step=0.5)
+    ESCANTEIOS_CASA_S = st.number_input("Escanteios Sofridos Casa", value=4.0, step=0.5)
+    ESCANTEIOS_FORA_F = st.number_input("Escanteios Feitos Fora", value=4.5, step=0.5)
+    ESCANTEIOS_FORA_S = st.number_input("Escanteios Sofridos Fora", value=5.5, step=0.5)
+    PESO_MANDO_ESC = st.number_input("Fator Mando Escanteios", value=1.05, step=0.01)
+
+# Expander 3: Cartões
+with st.sidebar.expander("3. CARTÕES"):
+    CART_CASA = st.number_input("Média Cartões Casa", value=2.2, step=0.1)
+    CART_FORA = st.number_input("Média Cartões Fora", value=2.8, step=0.1)
+    CART_ARB = st.number_input("Média Árbitro", value=4.5, step=0.1)
+    CART_LIGA = st.number_input("Média Liga (Cartões)", value=4.2, step=0.1)
+    PESO_CLASSICO = st.number_input("Peso Clássico", value=1.1, step=0.05)
+    PESO_DECISAO = st.number_input("Peso Decisão", value=1.0, step=0.05)
+    PESO_RIVALIDADE = st.number_input("Peso Rivalidade", value=1.0, step=0.05)
+
+# Expander 4: Gestão de Banca & Odds
+with st.sidebar.expander("4. ODDS E BANCA"):
+    BANCA = st.number_input("Sua Banca Total (R$)", value=1000.0, step=50.0)
+    ODD_CASA = st.number_input(f"Odd {TIME_CASA}", value=1.90, step=0.05)
+    ODD_EMPATE = st.number_input("Odd Empate", value=3.40, step=0.05)
+    ODD_FORA = st.number_input(f"Odd {TIME_FORA}", value=4.20, step=0.05)
+    ODD_O25 = st.number_input("Odd Over 2.5 Gols", value=1.95, step=0.05)
+    ODD_BTTS = st.number_input("Odd Ambos Marcam", value=1.85, step=0.05)
+
 # ==========================================
-# CÁLCULOS MATEMÁTICOS (Módulos Adaptados)
+# CÁLCULOS MATEMÁTICOS
 # ==========================================
 
-# Modulo 1 - Dixon Coles
+# Módulo 1 - Dixon Coles
 f_ataque_casa = GF_CASA / LIGA_MEDIA_GOLS_MANDANTE
 f_defesa_casa = GA_CASA / LIGA_MEDIA_GOLS_VISITANTE
 f_ataque_fora = GF_FORA / LIGA_MEDIA_GOLS_VISITANTE
@@ -101,17 +119,17 @@ over25 = sum(matriz[x,y] for x in range(n) for y in range(n) if x+y > 2.5)
 btts = sum(matriz[x,y] for x in range(1, n) for y in range(1, n))
 idx_max = np.unravel_index(np.argmax(matriz), matriz.shape)
 
-# Modulo 2 - Escanteios
+# Módulo 2 - Escanteios
 esc_casa = (ESCANTEIOS_CASA_F + ESCANTEIOS_FORA_S) / 2 * PESO_MANDO_ESC
 esc_fora = (ESCANTEIOS_FORA_F + ESCANTEIOS_CASA_S) / 2
 lambda_esc = esc_casa + esc_fora
 
-# Modulo 3 - Cartoes
-fator_arb = CART_ARB / CART_LIGA
+# Módulo 3 - Cartões
+fator_arb = CART_ARB / CART_LIGA if CART_LIGA > 0 else 1.0
 fator_int = PESO_CLASSICO * PESO_DECISAO * PESO_RIVALIDADE
 lambda_cart = (CART_CASA + CART_FORA) * fator_arb * fator_int
 
-# Modulo 5 - Monte Carlo
+# Módulo 5 - Monte Carlo
 N_SIM = 100_000
 rng = np.random.default_rng(42)
 gols_casa_sim = rng.poisson(lambda_casa, N_SIM)
@@ -127,22 +145,23 @@ tab1, tab2, tab3, tab4 = st.tabs(["📊 Resumo e Consenso", "🥅 Matriz Dixon-C
 
 with tab1:
     st.subheader(f"Previsão de Jogo: {TIME_CASA} x {TIME_FORA}")
+    st.caption(f"📅 Data da Partida: {DATA_JOGO.strftime('%d/%m/%Y')}")
+    
     col1, col2, col3 = st.columns(3)
-    col1.metric(f"Vitória {TIME_CASA}", f"{p_vitoria_casa*100:.1f}%", f"Odd Justa: {1/p_vitoria_casa:.2f}")
-    col2.metric("Empate", f"{p_empate*100:.1f}%", f"Odd Justa: {1/p_empate:.2f}")
-    col3.metric(f"Vitória {TIME_FORA}", f"{p_vitoria_fora*100:.1f}%", f"Odd Justa: {1/p_vitoria_fora:.2f}")
+    col1.metric(f"Vitória {TIME_CASA}", f"{p_vitoria_casa*100:.1f}%", f"Odd Justa: {1/p_vitoria_casa:.2f}" if p_vitoria_casa > 0 else "N/A")
+    col2.metric("Empate", f"{p_empate*100:.1f}%", f"Odd Justa: {1/p_empate:.2f}" if p_empate > 0 else "N/A")
+    col3.metric(f"Vitória {TIME_FORA}", f"{p_vitoria_fora*100:.1f}%", f"Odd Justa: {1/p_vitoria_fora:.2f}" if p_vitoria_fora > 0 else "N/A")
     
     st.markdown("---")
     col4, col5, col6 = st.columns(3)
-    col4.metric("Over 2.5 Gols", f"{over25*100:.1f}%", f"Odd Justa: {1/over25:.2f}")
-    col5.metric("Ambos Marcam (BTTS)", f"{btts*100:.1f}%", f"Odd Justa: {1/btts:.2f}")
+    col4.metric("Over 2.5 Gols", f"{over25*100:.1f}%", f"Odd Justa: {1/over25:.2f}" if over25 > 0 else "N/A")
+    col5.metric("Ambos Marcam (BTTS)", f"{btts*100:.1f}%", f"Odd Justa: {1/btts:.2f}" if btts > 0 else "N/A")
     col6.metric("Placar Mais Provável", f"{idx_max[0]} x {idx_max[1]}")
 
 with tab2:
     st.subheader("Matriz de Probabilidades de Placar Exato")
     st.markdown("Células mais escuras representam os placares mais prováveis.")
     
-    # Formatando para exibição em Heatmap via Pandas Styling
     df_matriz = pd.DataFrame(matriz, index=[f"{TIME_CASA} {i}" for i in range(n)], columns=[f"{TIME_FORA} {i}" for i in range(n)])
     st.dataframe(df_matriz.style.background_gradient(cmap='Greens', axis=None).format("{:.2%}"), height=400, use_container_width=True)
 
@@ -182,8 +201,13 @@ with tab4:
         edge = (prob * odd) - 1
         kelly = max(0, edge / (odd - 1)) if odd > 1 else 0
         stake = kelly * BANCA
-        tabela_kelly.append({"Mercado": nome, "Probabilidade": f"{prob*100:.1f}%", "Odd": odd, "Edge": f"{edge*100:.1f}%", "Aposta (1/2 Kelly)": f"R$ {stake/2:.2f}"})
+        tabela_kelly.append({
+            "Mercado": nome, 
+            "Probabilidade": f"{prob*100:.1f}%", 
+            "Odd": f"{odd:.2f}", 
+            "Edge": f"{edge*100:.1f}%", 
+            "Aposta (1/2 Kelly)": f"R$ {stake/2:.2f}"
+        })
         
     st.table(pd.DataFrame(tabela_kelly))
     st.caption("Edge positivo significa que o modelo encontrou valor na odd oferecida pela casa de aposta. A coluna de Aposta utiliza o critério de 'Meio Kelly' para gestão conservadora.")
-
